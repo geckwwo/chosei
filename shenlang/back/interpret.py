@@ -16,6 +16,7 @@ class Context:
 class ShenModule:
     def __init__(self):
         def _shen_import(vm, mod):
+            # TODO: make this actually usable
             if isinstance(mod, NodeIden):
                 mod = mod.iden
             elif isinstance(mod, NodeAttr):
@@ -24,6 +25,7 @@ class ShenModule:
             else:
                 raise ValueError("module has to be iden")
             vm.ctx_stack[-1].ctx[mod.split(".")[-1]] = __import__(mod, fromlist=mod.split("."))
+        # TODO: move into some sort of constant? add some basic std functionality
         self.globals = Context({
             "import": _shen_import
         })
