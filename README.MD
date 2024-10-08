@@ -1,5 +1,5 @@
-# Shen
-The Shen Programming Language
+# 墸彁 (Chosei)
+The 墸彁 (Chosei) Programming Language
 
 # TODO
 

@@ -13,9 +13,9 @@ class Context:
     def has(self, name):
         return name in self.ctx or (self.parent.has(name) if self.parent is not None else False)
 
-class ShenModule:
+class ChoseiModule:
     def __init__(self):
-        def _shen_import(vm, mod):
+        def _chse_import(vm, mod):
             # TODO: make this actually usable
             if isinstance(mod, NodeIden):
                 mod = mod.iden
@@ -27,7 +27,7 @@ class ShenModule:
             vm.ctx_stack[-1].ctx[mod.split(".")[-1]] = __import__(mod, fromlist=mod.split("."))
         # TODO: move into some sort of constant? add some basic std functionality
         self.globals = Context({
-            "import": _shen_import
+            "import": _chse_import
         })
         self.ctx_stack = []
     
@@ -41,7 +41,7 @@ class ShenModule:
         return getattr(self, "visit_" + node.__class__.__name__, self.no_visitor)(node)
     
     def no_visitor(self, node: Node):
-        raise NotImplementedError(f"no impl in shenmodule for {node}")
+        raise NotImplementedError(f"no impl in chsemodule for {node}")
     
     def visit_NodeList(self, node: NodeList):
         if len(node.args) == 0:
