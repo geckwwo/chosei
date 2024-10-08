@@ -1,4 +1,10 @@
 from ..front.nodes import *
+from ..front.lexer import Lexer
+from ..front.parser import Parser
+import os
+from pathlib import Path
+import importlib.util
+import sys
 
 class Context:
     def __init__(self, ctx=None, parent=None):
@@ -13,18 +19,55 @@ class Context:
     def has(self, name):
         return name in self.ctx or (self.parent.has(name) if self.parent is not None else False)
 
+class Tag:
+    def __init__(self, tag):
+        self.tag = tag
+    def __repr__(self):
+        return f":{self.tag}"
+
 class ChoseiModule:
     def __init__(self):
-        def _chse_import(vm, mod):
-            # TODO: make this actually usable
-            if isinstance(mod, NodeIden):
-                mod = mod.iden
-            elif isinstance(mod, NodeAttr):
-                assert isinstance(mod.expr, NodeIden)
-                mod = mod.expr.iden + "." + mod.attr
-            else:
-                raise ValueError("module has to be iden")
-            vm.ctx_stack[-1].ctx[mod.split(".")[-1]] = __import__(mod, fromlist=mod.split("."))
+        # vvv this is so terrible but okay
+        self.import_locations = [Path(os.getcwd()), Path(os.path.dirname(os.path.realpath(__file__))).parent.parent / "std/"]
+        
+        def _chse_import(vm: ChoseiModule, *args):
+            # (import "path to a mod")
+            # (import :mod)
+            # (import :mod as this)
+            assert len(args) in (1, 3), "Expected (import :mod) or (import :mod as name)"
+            
+            mod = vm.visit(args[0])
+            assert isinstance(mod, (Tag, str)), "Module should be :tag or 'string'"
+            if isinstance(mod, Tag):
+                mod = mod.tag
+
+            mod_name = mod.split(".")[-1]
+            if len(args) == 3:
+                assert isinstance(args[1], NodeIden) and args[1].iden == "as", "'as' expected"
+                assert isinstance(args[2], NodeIden), "Expected an identifier for 'as' name"
+                mod_name = args[2].iden
+            
+            # determine module location
+            for loc in vm.import_locations:
+                # check for native (python) module
+                if (py_mod := loc / ("/".join(mod.split(".")) + ".py")).exists():
+                    spec = importlib.util.spec_from_file_location(mod_name, str(py_mod))
+                    module = importlib.util.module_from_spec(spec)
+                    sys.modules[spec.name] = module 
+                    spec.loader.exec_module(module)
+                    vm.ctx_stack[-1].ctx[mod_name] = module
+                    return
+                elif (chosei_mod := loc / ("/".join(mod.split(".")) + ".chse")).exists():
+                    src = chosei_mod.open("r").read()
+                    tokens = Lexer(src).run()
+                    ast = Parser(tokens).run()
+                    module = ChoseiModule()
+                    module.run(ast)
+                    vm.ctx_stack[-1].ctx[mod_name] = module
+                    return
+            
+            raise ImportError(f"Could not find a name for import: {mod}")
+
         # TODO: move into some sort of constant? add some basic std functionality
         self.globals = Context({
             "import": _chse_import
@@ -56,3 +99,6 @@ class ChoseiModule:
     
     def visit_NodeAttr(self, node: NodeAttr):
         return getattr(self.visit(node.expr), node.attr)
+    
+    def visit_NodeTag(self, node: NodeTag):
+        return Tag(node.tag)
