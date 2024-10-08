@@ -33,6 +33,10 @@ class Parser:
             return self.const()
         elif self.tok.type == TokenType.IDEN:
             return self.iden()
+        elif self.tok.type == TokenType.TAG:
+            v = NodeTag(self.tok.value)
+            self.next()
+            return v
         else:
             raise NotImplementedError(self.tok)
     

@@ -15,6 +15,9 @@ class NodeConst(Node):
 class NodeIden(Node):
     def __init__(self, iden):
         self.iden = iden
+class NodeTag(Node):
+    def __init__(self, tag):
+        self.tag = tag
 class NodeAttr(Node):
     def __init__(self, expr, attr):
         self.expr = expr
